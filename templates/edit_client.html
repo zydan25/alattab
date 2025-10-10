@@ -1,0 +1,232 @@
+{% extends "base.html" %}
+
+{% block title %}تعديل عميل - {{ client.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-user-edit"></i> تعديل بيانات العميل</h2>
+        <div>
+            <a href="/client/{{ client.id }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-right"></i> العودة لتفاصيل العميل
+            </a>
+            <a href="/dashboard" class="btn btn-outline-secondary">
+                <i class="fas fa-home"></i> العودة للوحة التحكم
+            </a>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-edit"></i> معلومات العميل</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="/client/{{ client.id }}/edit" class="needs-validation" novalidate>
+                <div class="row">
+                    <!-- Basic Info -->
+                    <div class="col-md-6">
+                        <h6 class="border-bottom pb-2 mb-3"><i class="fas fa-user"></i> البيانات الأساسية</h6>
+                        
+                        <!-- Name -->
+                        <div class="mb-3">
+                            <label for="name" class="form-label">
+                                <i class="fas fa-user"></i> اسم العميل <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="name" 
+                                   name="name" 
+                                   value="{{ client.name }}" 
+                                   required
+                                   placeholder="أدخل اسم العميل">
+                            <div class="invalid-feedback">
+                                الرجاء إدخال اسم العميل
+                            </div>
+                        </div>
+
+                        <!-- WhatsApp -->
+                        <div class="mb-3">
+                            <label for="whatsapp" class="form-label">
+                                <i class="fab fa-whatsapp"></i> رقم واتساب <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   id="whatsapp" 
+                                   name="whatsapp" 
+                                   value="{{ client.whatsapp }}" 
+                                   required
+                                   placeholder="مثال: 967771234567">
+                            <div class="invalid-feedback">
+                                الرجاء إدخال رقم واتساب
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Auto Query Settings -->
+                    <div class="col-md-6">
+                        <h6 class="border-bottom pb-2 mb-3"><i class="fas fa-clock"></i> إعدادات الاستعلام التلقائي</h6>
+                        
+                        <!-- Auto Query Time -->
+                        <div class="mb-3">
+                            <label for="auto_query_time" class="form-label">
+                                <i class="fas fa-clock"></i> وقت الاستعلام التلقائي
+                            </label>
+                            <input type="time" 
+                                   class="form-control" 
+                                   id="auto_query_time" 
+                                   name="auto_query_time" 
+                                   value="{{ client.auto_query_time.strftime('%H:%M') if client.auto_query_time else '08:00' }}">
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> الوقت الذي سيتم فيه الاستعلام التلقائي عن جميع أرقام العميل
+                            </small>
+                        </div>
+
+                        <!-- Auto Query Enabled -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-toggle-on"></i> حالة الاستعلام التلقائي
+                            </label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" 
+                                       type="checkbox" 
+                                       id="auto_query_enabled" 
+                                       name="auto_query_enabled" 
+                                       value="1"
+                                       {% if client.auto_query_enabled %}checked{% endif %}>
+                                <label class="form-check-label" for="auto_query_enabled">
+                                    <span class="badge bg-success" id="status-badge">
+                                        <i class="fas fa-check"></i> مفعّل
+                                    </span>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> عند التفعيل، سيتم الاستعلام عن جميع الأرقام تلقائياً في الوقت المحدد
+                            </small>
+                        </div>
+
+                        <!-- Registration Date (Read Only) -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="fas fa-calendar"></i> تاريخ التسجيل
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   value="{{ client.created_at.strftime('%Y-%m-%d %H:%M') if client.created_at else 'غير محدد' }}" 
+                                   disabled>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics (Optional) -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="alert alert-info">
+                            <h6><i class="fas fa-info-circle"></i> معلومات إضافية</h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>عدد الأرقام:</strong> <span class="badge bg-primary">{{ numbers_count }}</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>معرف العميل:</strong> #{{ client.id }}
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>آخر تحديث:</strong> الآن
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mt-4">
+                    <div>
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save"></i> حفظ التعديلات
+                        </button>
+                        <a href="/client/{{ client.id }}" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-times"></i> إلغاء
+                        </a>
+                    </div>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="fas fa-trash"></i> حذف العميل
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> تأكيد الحذف</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>تحذير:</strong> هل أنت متأكد من حذف العميل <strong>{{ client.name }}</strong>؟</p>
+                <p class="text-danger">سيتم حذف جميع الأرقام المرتبطة بهذا العميل!</p>
+                <p>عدد الأرقام المرتبطة: <span class="badge bg-warning">{{ numbers_count }}</span></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <form method="POST" action="/dashboard/delete_client" style="display: inline;">
+                    <input type="hidden" name="client_id" value="{{ client.id }}">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> تأكيد الحذف
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Form validation
+(function() {
+    'use strict';
+    var forms = document.querySelectorAll('.needs-validation');
+    Array.prototype.slice.call(forms).forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+})();
+
+// Toggle status badge
+document.getElementById('auto_query_enabled').addEventListener('change', function() {
+    const badge = document.getElementById('status-badge');
+    if (this.checked) {
+        badge.className = 'badge bg-success';
+        badge.innerHTML = '<i class="fas fa-check"></i> مفعّل';
+    } else {
+        badge.className = 'badge bg-danger';
+        badge.innerHTML = '<i class="fas fa-times"></i> غير مفعّل';
+    }
+});
+</script>
+
+<style>
+.card {
+    border-radius: 10px;
+}
+.form-label {
+    font-weight: 600;
+}
+.form-control:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+.form-check-input:checked {
+    background-color: #198754;
+    border-color: #198754;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}رمز QR - بوت واتساب{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-qrcode"></i> رمز QR للاتصال بواتساب</h5>
+            </div>
+            <div class="card-body text-center">
+                {% if session_data and session_data.status == 'qr_code' and qr_code %}
+                    <div class="mb-4">
+                        <img src="data:image/png;base64,{{ qr_code }}" class="img-fluid" style="max-width: 300px;">
+                    </div>
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle"></i> تعليمات المسح:</h6>
+                        <ol class="text-start">
+                            <li>افتح تطبيق واتساب على هاتفك</li>
+                            <li>اذهب إلى الإعدادات > الأجهزة المرتبطة</li>
+                            <li>اضغط على "ربط جهاز"</li>
+                            <li>امسح الرمز أعلاه</li>
+                        </ol>
+                    </div>
+                    <button class="btn btn-primary" onclick="refreshQR()">
+                        <i class="fas fa-sync"></i> تحديث الرمز
+                    </button>
+                {% elif session_data and session_data.status == 'connected' %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle fa-3x mb-3"></i>
+                        <h5>البوت متصل بنجاح!</h5>
+                        <p class="mb-0">رقم الهاتف: {{ session_data.phone_number or 'غير محدد' }}</p>
+                        <p class="mb-0">تاريخ الاتصال: {{ session_data.connected_at or 'غير محدد' }}</p>
+                    </div>
+                    <a href="/whatsapp" class="btn btn-success">
+                        <i class="fas fa-tachometer-alt"></i> الذهاب للوحة الإدارة
+                    </a>
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                        <h5>البوت غير متصل</h5>
+                        <p class="mb-0">يرجى بدء الاتصال أولاً لعرض رمز QR</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="startConnection()">
+                        <i class="fas fa-play"></i> بدء الاتصال
+                    </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function refreshQR() {
+    showLoading('جاري تحديث رمز QR...');
+    try {
+        const response = await fetch('/api/bot/qr-refresh', { method: 'POST' });
+        const data = await response.json();
+        if (data.success) {
+            showSuccess('تم تحديث رمز QR');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showError(data.message || 'فشل في تحديث رمز QR');
+        }
+    } catch (error) {
+        showError('خطأ في الشبكة: ' + error.message);
+    }
+}
+
+async function startConnection() {
+    showLoading('جاري بدء الاتصال...');
+    try {
+        const response = await fetch('/api/bot/connect', { method: 'POST' });
+        const data = await response.json();
+        if (data.success) {
+            showSuccess('تم بدء الاتصال بنجاح');
+            setTimeout(() => location.reload(), 2000);
+        } else {
+            showError(data.message || 'فشل في بدء الاتصال');
+        }
+    } catch (error) {
+        showError('خطأ في الشبكة: ' + error.message);
+    }
+}
+
+// تحديث تلقائي كل 5 ثوانِ إذا كان في حالة انتظار QR
+{% if session_data and session_data.status == 'qr_code' %}
+setInterval(() => {
+    location.reload();
+}, 5000);
+{% endif %}
+</script>
+{% endblock %}

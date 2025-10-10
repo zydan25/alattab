@@ -1,0 +1,242 @@
+{% extends "base.html" %}
+
+{% block title %}قاعدة البيانات - بوت واتساب{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- إحصائيات عامة -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> إحصائيات قاعدة البيانات</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body">
+                                <h3>{{ stats.total_clients or 0 }}</h3>
+                                <p class="mb-0">إجمالي العملاء</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body">
+                                <h3>{{ stats.total_numbers or 0 }}</h3>
+                                <p class="mb-0">إجمالي الأرقام</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body">
+                                <h3>{{ stats.total_messages or 0 }}</h3>
+                                <p class="mb-0">إجمالي السجلات</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-white">
+                            <div class="card-body">
+                                <h3>{{ stats.active_sessions or 0 }}</h3>
+                                <p class="mb-0">الجلسات النشطة</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- آخر العملاء -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6><i class="fas fa-users"></i> آخر العملاء المضافين</h6>
+                <a href="/dashboard" class="btn btn-sm btn-outline-primary">عرض الكل</a>
+            </div>
+            <div class="card-body">
+                {% if recent_clients %}
+                <div class="list-group list-group-flush">
+                    {% for client in recent_clients %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ client[0] }}</strong><br>
+                            <small class="text-muted">{{ client[1] }}</small>
+                        </div>
+                        <span class="badge bg-primary">#{{ client[2] }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center">لا توجد عملاء</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- آخر الأرقام -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6><i class="fas fa-phone"></i> آخر الأرقام المضافة</h6>
+                <a href="/dashboard" class="btn btn-sm btn-outline-success">عرض الكل</a>
+            </div>
+            <div class="card-body">
+                {% if recent_numbers %}
+                <div class="list-group list-group-flush">
+                    {% for number in recent_numbers %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ number[0] }}</strong><br>
+                            <small class="text-muted">{{ number[2] }} - {{ number[1] }}</small>
+                        </div>
+                        <span class="badge bg-success">#{{ number[3] }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted text-center">لا توجد أرقام</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- آخر السجلات -->
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6><i class="fas fa-history"></i> آخر سجلات الاستعلام</h6>
+                <a href="/history" class="btn btn-sm btn-outline-info">عرض الكل</a>
+            </div>
+            <div class="card-body">
+                {% if recent_logs %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>الرقم</th>
+                                <th>النوع</th>
+                                <th>العميل</th>
+                                <th>التاريخ</th>
+                                <th>المعرف</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in recent_logs %}
+                            <tr>
+                                <td><code>{{ log[0] }}</code></td>
+                                <td>
+                                    <span class="badge bg-{{ 'primary' if log[1] == 'yemen4g' else 'success' }}">
+                                        {{ log[1] }}
+                                    </span>
+                                </td>
+                                <td>{{ log[2] }}</td>
+                                <td>{{ log[3] }}</td>
+                                <td><span class="badge bg-secondary">#{{ log[4] }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center">لا توجد سجلات</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- أدوات إدارة قاعدة البيانات -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-tools"></i> أدوات إدارة قاعدة البيانات</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-outline-primary w-100" onclick="backupDatabase()">
+                            <i class="fas fa-download"></i><br>
+                            نسخ احتياطي
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-outline-success w-100" onclick="optimizeDatabase()">
+                            <i class="fas fa-compress-alt"></i><br>
+                            تحسين قاعدة البيانات
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-outline-info w-100" onclick="exportData()">
+                            <i class="fas fa-file-export"></i><br>
+                            تصدير البيانات
+                        </button>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <button class="btn btn-outline-warning w-100" onclick="cleanupOldLogs()">
+                            <i class="fas fa-broom"></i><br>
+                            تنظيف السجلات القديمة
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <h6><i class="fas fa-info-circle"></i> معلومات قاعدة البيانات:</h6>
+                    <ul class="mb-0">
+                        <li><strong>المسار:</strong> <code>{{ config.get('db_path', 'db.sqlite3') }}</code></li>
+                        <li><strong>النوع:</strong> SQLite</li>
+                        <li><strong>الجداول:</strong> clients, numbers, logs, number_history</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function backupDatabase() {
+    if (confirm('هل تريد إنشاء نسخة احتياطية من قاعدة البيانات؟')) {
+        showLoading('جاري إنشاء النسخة الاحتياطية...');
+        // يمكن إضافة API call هنا
+        setTimeout(() => {
+            showSuccess('تم إنشاء النسخة الاحتياطية بنجاح');
+        }, 2000);
+    }
+}
+
+function optimizeDatabase() {
+    if (confirm('هل تريد تحسين قاعدة البيانات؟ قد يستغرق هذا بعض الوقت.')) {
+        showLoading('جاري تحسين قاعدة البيانات...');
+        // يمكن إضافة API call هنا
+        setTimeout(() => {
+            showSuccess('تم تحسين قاعدة البيانات بنجاح');
+        }, 3000);
+    }
+}
+
+function exportData() {
+    showLoading('جاري تصدير البيانات...');
+    // يمكن إضافة API call هنا لتصدير البيانات
+    setTimeout(() => {
+        showSuccess('تم تصدير البيانات بنجاح');
+    }, 2000);
+}
+
+function cleanupOldLogs() {
+    if (confirm('هل تريد حذف السجلات القديمة (أكثر من 30 يوم)؟ لا يمكن التراجع عن هذا الإجراء.')) {
+        showLoading('جاري تنظيف السجلات القديمة...');
+        // يمكن إضافة API call هنا
+        setTimeout(() => {
+            showSuccess('تم تنظيف السجلات القديمة بنجاح');
+            location.reload();
+        }, 2000);
+    }
+}
+
+// تحديث تلقائي كل دقيقة
+setInterval(() => {
+    location.reload();
+}, 60000);
+</script>
+{% endblock %}

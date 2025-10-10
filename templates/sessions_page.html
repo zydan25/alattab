@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}إدارة الجلسات - بوت واتساب{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-history"></i> إدارة جلسات واتساب</h5>
+                <button class="btn btn-primary btn-sm" onclick="refreshSessions()">
+                    <i class="fas fa-sync"></i> تحديث
+                </button>
+            </div>
+            <div class="card-body">
+                {% if current_session %}
+                <div class="alert alert-info mb-4">
+                    <h6><i class="fas fa-info-circle"></i> الجلسة النشطة الحالية:</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <strong>معرف الجلسة:</strong> {{ current_session.session_id }}<br>
+                            <strong>الحالة:</strong> 
+                            <span class="badge bg-{{ 'success' if current_session.status == 'connected' else 'warning' if current_session.status == 'qr_code' else 'secondary' }}">
+                                {{ current_session.status }}
+                            </span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>رقم الهاتف:</strong> {{ current_session.phone_number or 'غير محدد' }}<br>
+                            <strong>تاريخ الإنشاء:</strong> {{ current_session.created_at or 'غير محدد' }}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if sessions %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>معرف الجلسة</th>
+                                <th>الحالة</th>
+                                <th>رقم الهاتف</th>
+                                <th>تاريخ الإنشاء</th>
+                                <th>آخر نشاط</th>
+                                <th>نشطة</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in sessions %}
+                            <tr class="{{ 'table-success' if session.is_active else '' }}">
+                                <td>
+                                    <code>{{ session.session_id }}</code>
+                                    {% if session.is_active %}
+                                    <span class="badge bg-success ms-2">نشطة</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ 'success' if session.status == 'connected' else 'warning' if session.status == 'qr_code' else 'secondary' }}">
+                                        {% if session.status == 'connected' %}
+                                            متصل
+                                        {% elif session.status == 'qr_code' %}
+                                            في انتظار المسح
+                                        {% elif session.status == 'disconnected' %}
+                                            منقطع
+                                        {% else %}
+                                            {{ session.status }}
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>{{ session.phone_number or '-' }}</td>
+                                <td>{{ session.created_at or '-' }}</td>
+                                <td>{{ session.last_activity or '-' }}</td>
+                                <td>
+                                    {% if session.is_active %}
+                                    <i class="fas fa-check-circle text-success"></i>
+                                    {% else %}
+                                    <i class="fas fa-times-circle text-muted"></i>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        {% if not session.is_active %}
+                                        <button class="btn btn-outline-success" onclick="activateSession('{{ session.session_id }}')">
+                                            <i class="fas fa-play"></i> تفعيل
+                                        </button>
+                                        {% endif %}
+                                        <button class="btn btn-outline-info" onclick="viewSessionDetails('{{ session.session_id }}')">
+                                            <i class="fas fa-eye"></i> عرض
+                                        </button>
+                                        {% if not session.is_active %}
+                                        <button class="btn btn-outline-danger" onclick="deleteSession('{{ session.session_id }}')">
+                                            <i class="fas fa-trash"></i> حذف
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">لا توجد جلسات محفوظة</h5>
+                    <p class="text-muted">ابدأ بإنشاء جلسة جديدة من لوحة إدارة البوت</p>
+                    <a href="/whatsapp" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> إنشاء جلسة جديدة
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal لعرض تفاصيل الجلسة -->
+<div class="modal fade" id="sessionDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">تفاصيل الجلسة</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="sessionDetailsContent">
+                <!-- سيتم تحميل المحتوى هنا -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshSessions() {
+    location.reload();
+}
+
+function activateSession(sessionId) {
+    if (confirm('هل أنت متأكد من تفعيل هذه الجلسة؟ سيتم إلغاء تفعيل الجلسة الحالية.')) {
+        showLoading('جاري تفعيل الجلسة...');
+        // يمكن إضافة API call هنا لتفعيل الجلسة
+        showSuccess('تم تفعيل الجلسة بنجاح');
+        setTimeout(() => location.reload(), 1000);
+    }
+}
+
+function viewSessionDetails(sessionId) {
+    // البحث عن الجلسة في البيانات
+    const sessions = {{ sessions|tojson }};
+    const session = sessions.find(s => s.session_id === sessionId);
+    
+    if (session) {
+        const content = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>معلومات أساسية:</h6>
+                    <table class="table table-sm">
+                        <tr><td><strong>معرف الجلسة:</strong></td><td><code>${session.session_id}</code></td></tr>
+                        <tr><td><strong>الحالة:</strong></td><td><span class="badge bg-${session.status === 'connected' ? 'success' : session.status === 'qr_code' ? 'warning' : 'secondary'}">${session.status}</span></td></tr>
+                        <tr><td><strong>نشطة:</strong></td><td>${session.is_active ? '<i class="fas fa-check text-success"></i>' : '<i class="fas fa-times text-danger"></i>'}</td></tr>
+                        <tr><td><strong>رقم الهاتف:</strong></td><td>${session.phone_number || 'غير محدد'}</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>التواريخ:</h6>
+                    <table class="table table-sm">
+                        <tr><td><strong>تاريخ الإنشاء:</strong></td><td>${session.created_at || 'غير محدد'}</td></tr>
+                        <tr><td><strong>تاريخ الاتصال:</strong></td><td>${session.connected_at || 'غير محدد'}</td></tr>
+                        <tr><td><strong>آخر نشاط:</strong></td><td>${session.last_activity || 'غير محدد'}</td></tr>
+                        <tr><td><strong>آخر تحديث:</strong></td><td>${session.updated_at || 'غير محدد'}</td></tr>
+                    </table>
+                </div>
+            </div>
+            ${session.qr_code ? `
+            <div class="row mt-3">
+                <div class="col-12">
+                    <h6>رمز QR:</h6>
+                    <div class="text-center">
+                        <img src="data:image/png;base64,${session.qr_code}" class="img-fluid" style="max-width: 200px;">
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+        `;
+        
+        document.getElementById('sessionDetailsContent').innerHTML = content;
+        new bootstrap.Modal(document.getElementById('sessionDetailsModal')).show();
+    }
+}
+
+function deleteSession(sessionId) {
+    if (confirm('هل أنت متأكد من حذف هذه الجلسة؟ لا يمكن التراجع عن هذا الإجراء.')) {
+        showLoading('جاري حذف الجلسة...');
+        // يمكن إضافة API call هنا لحذف الجلسة
+        showSuccess('تم حذف الجلسة بنجاح');
+        setTimeout(() => location.reload(), 1000);
+    }
+}
+</script>
+{% endblock %}

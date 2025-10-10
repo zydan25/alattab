@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block title %}إعدادات النظام - بوت واتساب{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- إحصائيات النظام -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> إحصائيات النظام</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        المستخدمون
+                        <span class="badge bg-primary rounded-pill">{{ stats.total_users }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        العملاء
+                        <span class="badge bg-success rounded-pill">{{ stats.total_clients }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        الرسائل
+                        <span class="badge bg-info rounded-pill">{{ stats.total_messages }}</span>
+                    </li>
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between">
+                            <span>مساحة التخزين</span>
+                            <span>{{ stats.disk_usage }}</span>
+                        </div>
+                        <div class="progress mt-2" style="height: 5px;">
+                            {% if stats.disk_usage != 'غير متاح' %}
+                            <div class="progress-bar" role="progressbar" 
+                                 style="width: {{ stats.disk_usage.split('(')[1].split('%')[0]|float|int }}%" 
+                                 aria-valuenow="{{ stats.disk_usage.split('(')[1].split('%')[0]|float|int }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                            </div>
+                            {% else %}
+                            <div class="progress-bar bg-warning" role="progressbar" 
+                                 style="width: 100%" 
+                                 aria-valuenow="100" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100">
+                                 غير متاح
+                            </div>
+                            {% endif %}
+                        </div>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        وقت التشغيل
+                        <span>{{ stats.server_uptime }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        الإصدار
+                        <span class="badge bg-secondary">{{ stats.version }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        آخر نسخة احتياطية
+                        <span>{{ stats.last_backup }}</span>
+                    </li>
+                </ul>
+                <div class="d-grid gap-2 mt-3">
+                    <button class="btn btn-outline-primary" onclick="createBackup()">
+                        <i class="fas fa-download"></i> إنشاء نسخة احتياطية
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إعدادات التطبيق -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-cog"></i> إعدادات التطبيق</h5>
+            </div>
+            <div class="card-body">
+                <form id="settingsForm" onsubmit="saveSettings(event)">
+                    <!-- إعدادات عامة -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2 mb-3">عام</h6>
+                        <div class="mb-3">
+                            <label for="appName" class="form-label">اسم التطبيق</label>
+                            <input type="text" class="form-control" id="appName" name="app_name" 
+                                   value="{{ settings.get('app_name', 'بوت واتساب') }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="timezone" class="form-label">المنطقة الزمنية</label>
+                            <select class="form-select" id="timezone" name="timezone">
+                                <option value="Asia/Aden" {% if settings.get('timezone') == 'Asia/Aden' %}selected{% endif %}>اليمن (Asia/Aden)</option>
+                                <option value="Asia/Riyadh" {% if settings.get('timezone') == 'Asia/Riyadh' %}selected{% endif %}>السعودية (Asia/Riyadh)</option>
+                                <option value="Africa/Cairo" {% if settings.get('timezone') == 'Africa/Cairo' %}selected{% endif %}>مصر (Africa/Cairo)</option>
+                                <option value="Asia/Dubai" {% if settings.get('timezone') == 'Asia/Dubai' %}selected{% endif %}>دبي (Asia/Dubai)</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="itemsPerPage" class="form-label">عدد العناصر في الصفحة</label>
+                            <input type="number" class="form-control" id="itemsPerPage" name="items_per_page" 
+                                   min="5" max="100" value="{{ settings.get('items_per_page', 10) }}">
+                        </div>
+                    </div>
+
+                    <!-- إعدادات البريد الإلكتروني -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2 mb-3">إعدادات البريد الإلكتروني</h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="smtpServer" class="form-label">خادم SMTP</label>
+                                <input type="text" class="form-control" id="smtpServer" name="smtp_server"
+                                       value="{{ settings.get('smtp_server', 'smtp.example.com') }}">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="smtpPort" class="form-label">المنفذ</label>
+                                <input type="number" class="form-control" id="smtpPort" name="smtp_port"
+                                       value="{{ settings.get('smtp_port', 587) }}">
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <label for="smtpSecurity" class="form-label">التشفير</label>
+                                <select class="form-select" id="smtpSecurity" name="smtp_security">
+                                    <option value="tls" {% if settings.get('smtp_security') == 'tls' %}selected{% endif %}>TLS</option>
+                                    <option value="ssl" {% if settings.get('smtp_security') == 'ssl' %}selected{% endif %}>SSL</option>
+                                    <option value="none" {% if settings.get('smtp_security') == 'none' %}selected{% endif %}>بدون</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="smtpUsername" class="form-label">اسم المستخدم</label>
+                                <input type="text" class="form-control" id="smtpUsername" name="smtp_username"
+                                       value="{{ settings.get('smtp_username', '') }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="smtpPassword" class="form-label">كلمة المرور</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="smtpPassword" name="smtp_password"
+                                           value="{{ settings.get('smtp_password', '') }}">
+                                    <button class="btn btn-outline-secondary" type="button" 
+                                            onclick="togglePassword('smtpPassword')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="adminEmail" class="form-label">البريد الإلكتروني للمشرف</label>
+                            <input type="email" class="form-control" id="adminEmail" name="admin_email"
+                                   value="{{ settings.get('admin_email', '') }}">
+                        </div>
+                    </div>
+
+                    <!-- إعدادات إشعارات واتساب -->
+                    <div class="mb-4">
+                        <h6 class="border-bottom pb-2 mb-3">إشعارات واتساب</h6>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="enableWhatsAppNotifications" name="enable_whatsapp_notifications"
+                                   {% if settings.get('enable_whatsapp_notifications', True) %}checked{% endif %}>
+                            <label class="form-check-label" for="enableWhatsAppNotifications">تفعيل الإشعارات عبر واتساب</label>
+                        </div>
+                        <div class="mb-3">
+                            <label for="whatsappNotificationNumber" class="form-label">رقم واتساب للإشعارات</label>
+                            <input type="text" class="form-control" id="whatsappNotificationNumber" name="whatsapp_notification_number"
+                                   placeholder="967123456789" value="{{ settings.get('whatsapp_notification_number', '') }}">
+                            <div class="form-text">يجب إدخال الرقم مع رمز الدولة (مثال: 967123456789)</div>
+                        </div>
+                    </div>
+
+                    <!-- أزرار الحفظ -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary" onclick="resetToDefaults()">
+                            <i class="fas fa-undo"></i> إعادة تعيين
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> حفظ الإعدادات
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة النسخ الاحتياطي -->
+<div class="modal fade" id="backupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">النسخ الاحتياطي</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4" id="backupModalBody">
+                <div class="spinner-border text-primary mb-3" role="status" id="backupSpinner">
+                    <span class="visually-hidden">جاري التحميل...</span>
+                </div>
+                <p id="backupMessage">جاري إنشاء نسخة احتياطية من قاعدة البيانات...</p>
+                <div class="progress d-none" id="backupProgress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" 
+                         style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                <div id="backupResult" class="d-none">
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i>
+                        <span id="backupSuccessMessage">تم إنشاء النسخة الاحتياطية بنجاح</span>
+                    </div>
+                    <a href="#" class="btn btn-outline-primary" id="downloadBackupBtn" download>
+                        <i class="fas fa-download"></i> تحميل النسخة الاحتياطية
+                    </a>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// تبديل عرض كلمة المرور
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    const icon = event.currentTarget.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+// إنشاء نسخة احتياطية
+async function createBackup() {
+    const modal = new bootstrap.Modal(document.getElementById('backupModal'));
+    const backupSpinner = document.getElementById('backupSpinner');
+    const backupMessage = document.getElementById('backupMessage');
+    const backupProgress = document.getElementById('backupProgress');
+    const backupResult = document.getElementById('backupResult');
+    const downloadBtn = document.getElementById('downloadBackupBtn');
+    
+    // إعادة تعيين النموذج
+    backupSpinner.classList.remove('d-none');
+    backupMessage.textContent = 'جاري إنشاء نسخة احتياطية من قاعدة البيانات...';
+    backupProgress.classList.add('d-none');
+    backupResult.classList.add('d-none');
+    
+    // عرض النافذة المنبثقة
+    modal.show();
+    
+    try {
+        // محاكاة التقدم
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += 10;
+            if (progress >= 90) clearInterval(progressInterval);
+            updateProgress(progress);
+        }, 300);
+        
+        // طلب إنشاء نسخة احتياطية
+        const response = await fetch('/api/backup/create', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        clearInterval(progressInterval);
+        updateProgress(100);
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // إظهار رسالة النجاح
+            backupSpinner.classList.add('d-none');
+            backupMessage.classList.add('d-none');
+            backupResult.classList.remove('d-none');
+            
+            // تعيين رابط التحميل
+            if (result.download_url) {
+                downloadBtn.href = result.download_url;
+                downloadBtn.classList.remove('d-none');
+            } else {
+                downloadBtn.classList.add('d-none');
+            }
+            
+            // تحديث تاريخ آخر نسخة احتياطية
+            if (result.timestamp) {
+                document.querySelector('[data-last-backup]').textContent = 
+                    new Date(result.timestamp).toLocaleString('ar-YE');
+            }
+        } else {
+            throw new Error(result.message || 'فشل في إنشاء النسخة الاحتياطية');
+        }
+    } catch (error) {
+        console.error('Backup error:', error);
+        backupSpinner.classList.add('d-none');
+        backupMessage.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i>
+                حدث خطأ أثناء إنشاء النسخة الاحتياطية: ${error.message}
+            </div>
+        `;
+    }
+    
+    function updateProgress(percent) {
+        backupProgress.classList.remove('d-none');
+        const progressBar = backupProgress.querySelector('.progress-bar');
+        progressBar.style.width = `${percent}%`;
+        progressBar.setAttribute('aria-valuenow', percent);
+    }
+}
+
+// حفظ الإعدادات
+async function saveSettings(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const settings = {};
+    
+    // تحويل FormData إلى كائن عادي
+    formData.forEach((value, key) => {
+        // معالجة القيم المنطقية
+        if (value === 'on') {
+            settings[key] = true;
+        } else if (value === '') {
+            // تجاهل الحقول الفارغة
+            settings[key] = null;
+        } else if (!isNaN(value) && value !== '') {
+            // تحويل الأرقام
+            settings[key] = Number(value);
+        } else {
+            settings[key] = value;
+        }
+    });
+    
+    try {
+        showLoading('جاري حفظ الإعدادات...');
+        
+        const response = await fetch('/api/settings/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess('تم حفظ الإعدادات بنجاح');
+            
+            // تحديث عنوان التطبيق إذا تم تغييره
+            if (settings.app_name) {
+                document.title = settings.app_name + ' - إعدادات النظام';
+                const appNameElements = document.querySelectorAll('[data-app-name]');
+                appNameElements.forEach(el => {
+                    el.textContent = settings.app_name;
+                });
+            }
+            
+            // إعادة تحميل الصفحة بعد ثانيتين
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            throw new Error(result.message || 'حدث خطأ أثناء حفظ الإعدادات');
+        }
+    } catch (error) {
+        console.error('Save settings error:', error);
+        showError(error.message || 'حدث خطأ أثناء حفظ الإعدادات');
+    }
+}
+
+// إعادة تعيين الإعدادات الافتراضية
+function resetToDefaults() {
+    if (confirm('هل أنت متأكد من إعادة تعيين جميع الإعدادات إلى القيم الافتراضية؟ لا يمكن التراجع عن هذا الإجراء.')) {
+        fetch('/api/settings/reset', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showSuccess('تمت إعادة تعيين الإعدادات بنجاح');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                throw new Error(result.message || 'فشل في إعادة تعيين الإعدادات');
+            }
+        })
+        .catch(error => {
+            console.error('Reset settings error:', error);
+            showError(error.message || 'حدث خطأ أثناء إعادة تعيين الإعدادات');
+        });
+    }
+}
+
+// تهيئة الصفحة
+// document.addEventListener('DOMContentLoaded', function() {
+//     // يمكنك إضافة أي كود تهيئة إضافي هنا
+// });
+</script>
+{% endblock %}

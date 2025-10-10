@@ -1,0 +1,10 @@
+{
+  "domain": "http://sanaacash.yrbso.net/api/yr/",
+  "userid": "23603",
+  "username": "774952665",
+  "password": "572837wafaa",
+  "node_bridge_url": "http://127.0.0.1:3000",
+  "flask_public_url": "http://127.0.0.1:5000",
+  "SQLALCHEMY_DATABASE_URI":"sqlite:///balance.db"
+
+}

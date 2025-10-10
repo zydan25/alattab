@@ -1,0 +1,609 @@
+<!-- <!DOCTYPE html>
+
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>سجلات الاستعلام</title>
+  <style>
+    body {
+      font-family: "Tahoma", sans-serif;
+      background: #f7f9fc;
+      padding: 20px;
+      direction: rtl;
+      text-align: right;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    .controls {
+      margin-bottom: 15px;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-start;
+    }
+    select, button, input {
+      padding: 6px 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    th {
+      background: #f1f1f1;
+      cursor: pointer;
+    }
+    tr:hover {
+      background: #f9f9f9;
+    }
+    .daily {
+      color: green;
+      font-weight: bold;
+    }
+    .not-daily {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>سجلات الاستعلام</h2>
+
+  <div class="controls">
+    <label for="clientFilter">فلترة حسب العميل:</label>
+    <select id="clientFilter">
+      <option value="">الكل</option>
+      <option value="عميل 1">عميل 1</option>
+      <option value="عميل 2">عميل 2</option>
+      <option value="عميل 3">عميل 3</option>
+    </select>
+
+    <button onclick="sendReport()">📤 إرسال تقرير</button>
+  </div>
+
+  <table id="recordsTable">
+    <thead>
+      <tr>
+        <th onclick="sortTable(0)">العميل</th>
+        <th onclick="sortTable(1)">رقم الهاتف</th>
+        <th onclick="sortTable(2)">الرصيد الحالي (GB)</th>
+        <th onclick="sortTable(3)">الاستهلاك اليومي (GB)</th>
+        <th onclick="sortTable(4)">الاستهلاك منذ آخر تقرير (GB)</th>
+        <th onclick="sortTable(5)">المبلغ المتبقي</th>
+        <th onclick="sortTable(6)">المبلغ المستهلك</th>
+        <th onclick="sortTable(7)">تاريخ الاستعلام</th>
+        <th onclick="sortTable(8)">نوع الاستعلام</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- بيانات تجريبية 
+      <tr data-client="عميل 1">
+        <td>عميل 1</td>
+        <td>04421857</td>
+        <td>67.95</td>
+        <td>0.24</td>
+        <td>0.24</td>
+        <td>7134.75</td>
+        <td>25.2</td>
+        <td>2025-10-02 21:45</td>
+        <td class="daily">يومي</td>
+      </tr>
+      <tr data-client="عميل 2">
+        <td>عميل 2</td>
+        <td>05544556</td>
+        <td>50.12</td>
+        <td>1.2</td>
+        <td>3.4</td>
+        <td>6000</td>
+        <td>130</td>
+        <td>2025-10-02 19:30</td>
+        <td class="not-daily">غير يومي</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <script>
+    // فلترة حسب العميل
+    document.getElementById('clientFilter').addEventListener('change', function() {
+      const client = this.value;
+      const rows = document.querySelectorAll('#recordsTable tbody tr');
+      rows.forEach(row => {
+        if (!client || row.dataset.client === client) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+
+    // فرز الأعمدة
+    function sortTable(n) {
+      const table = document.getElementById("recordsTable");
+      let switching = true, dir = "asc", switchcount = 0;
+      while (switching) {
+        switching = false;
+        const rows = table.rows;
+        for (let i = 1; i < rows.length - 1; i++) {
+          let shouldSwitch = false;
+          let x = rows[i].getElementsByTagName("TD")[n];
+          let y = rows[i + 1].getElementsByTagName("TD")[n];
+          let xVal = isNaN(x.innerText) ? x.innerText.toLowerCase() : parseFloat(x.innerText);
+          let yVal = isNaN(y.innerText) ? y.innerText.toLowerCase() : parseFloat(y.innerText);
+          if (dir === "asc" ? xVal > yVal : xVal < yVal) {
+            shouldSwitch = true;
+            break;
+          }
+        if (shouldSwitch) {
+          rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+          switching = true;
+          switchcount++;
+        }
+        }
+        if (switchcount === 0 && dir === "asc") {
+          dir = "desc";
+          switching = true;
+        }
+      }
+    }
+
+    // إرسال تقرير
+    function sendReport() {
+      alert("📄 سيتم إرسال التقرير (اربط هذه الدالة بالسيرفر لاحقًا)");
+    }
+  </script>
+
+</body>
+</html> 
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>سجلات الاستعلام</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            direction: rtl;
+            text-align: right;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+        }
+        th {
+            background-color: #f5f5f5;
+        }
+        .daily-yes {
+            color: green;
+            font-weight: bold;
+        }
+        .daily-no {
+            color: red;
+            font-weight: bold;
+        }
+        .notes {
+            font-weight: bold;
+        }
+        .btn-report {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn-report:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<h2>سجلات الاستعلام للعميل: {{ customer_name }}</h2>
+
+<table id="queriesTable">
+    <thead>
+        <tr>
+            <th>رقم الهاتف</th>
+            <th>الرصيد الحالي (GB)</th>
+            <th>الاستهلاك منذ آخر تقرير (GB)</th>
+            <th>الاستهلاك اليومي (GB)</th>
+            <th>المبلغ المستهلك</th>
+            <th>المبلغ المتبقي</th>
+            <th>اليومي</th>
+            <th>الأيام المتبقية</th>
+            <th>تاريخ الاستعلام</th>
+            <th>وقت منذ آخر استعلام</th>
+            <th>الملاحظات</th>
+            <th>إرسال تقرير</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for q in queries %}
+        <tr>
+            <td>{{ q.phone_number }}</td>
+            <td>{{ "%.2f"|format(q.avblnce) }}</td>
+            <td>{{ "%.2f"|format(q.consumption_since_last) }}</td>
+            <td>{{ "%.2f"|format(q.daily_consumption) }}</td>
+            <td>{{ "%.2f"|format(q.amount_consumed) }}</td>
+            <td>{{ "%.2f"|format(q.amount_remaining) }}</td>
+            <td>{{ "نعم" if q.daily else "لا" }}</td>
+            <td>{{ q.days_remaining if q.days_remaining is not none else "—" }}</td>
+            <td>{{ datetime_ar(q.query_time) }}</td>
+            <td>{{ q.time_since_last if q.time_since_last else "—" }}</td>
+            <td>{{ q.notes }}</td>
+            <td><button class="btn-report" onclick="sendReport({{ q.id }})">إرسال تقرير</button></td>
+        </tr>
+        
+        {% endfor %}
+    </tbody>
+</table>
+
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script>
+$(document).ready(function() {
+    $('#queriesTable').DataTable({
+        "order": [[ 8, "desc" ]],  // ترتيب حسب تاريخ الاستعلام
+        "pageLength": 25,
+        "language": {
+            "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json"
+        }
+    });
+});
+
+function sendReport(queryId) {
+    // استدعاء API لإرسال التقرير
+    fetch(`/send_report/${queryId}`, {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(data => alert(data.message))
+    .catch(err => alert('حدث خطأ أثناء إرسال التقرير'));
+}
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>سجلات الاستعلام</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            direction: rtl;
+            text-align: right;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+        }
+        th, td {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background-color: #007bff;
+            color: #fff;
+        }
+        tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+        .daily-yes {
+            color: green;
+            font-weight: bold;
+        }
+        .daily-no {
+            color: red;
+            font-weight: bold;
+        }
+        .notes {
+            font-weight: bold;
+            color: #444;
+        }
+        .btn-report {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn-report:hover {
+            background-color: #218838;
+        }
+        .filter-container {
+            margin-bottom: 15px;
+        }
+        .filter-container label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .filter-container select {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+<h2>سجلات الاستعلام للعميل: {{ customer_name }}</h2>
+
+<div class="filter-container">
+    <label>فلترة حسب الاستعلام اليومي:</label>
+    <select id="dailyFilter">
+        <option value="all">الكل</option>
+        <option value="yes">يومي فقط</option>
+        <option value="no">غير يومي فقط</option>
+    </select>
+</div>
+
+<table id="queriesTable">
+    <thead>
+        <tr>
+            <th>رقم الهاتف</th>
+            <th>الرصيد الحالي (GB)</th>
+            <th>الاستهلاك منذ آخر تقرير (GB)</th>
+            <th>الاستهلاك اليومي (GB)</th>
+            <th>المبلغ المستهلك</th>
+            <th>المبلغ المتبقي</th>
+            <th>اليومي</th>
+            <th>الأيام المتبقية</th>
+            <th>تاريخ الاستعلام</th>
+            <th>وقت منذ آخر استعلام</th>
+            <th>الملاحظات</th>
+            <th>إرسال تقرير</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for q in queries %}
+        <tr>
+            <td>{{ q.phone_number }}</td>
+            <td>{{ "%.2f"|format(q.avblnce) }}</td>
+            <td>{{ "%.2f"|format(q.consumption_since_last) }}</td>
+            <td>{{ "%.2f"|format(q.daily_consumption) }}</td>
+            <td>{{ "%.2f"|format(q.amount_consumed) }}</td>
+            <td>{{ "%.2f"|format(q.amount_remaining) }}</td>
+            <td class="{{ 'daily-yes' if q.daily else 'daily-no' }}">{{ "نعم" if q.daily else "لا" }}</td>
+            <td>{{ q.days_remaining if q.days_remaining is not none else "—" }}</td>
+            <td>{{ datetime_ar(q.query_time) }}</td>
+            <td>{{ q.time_since_last if q.time_since_last else "—" }}</td>
+            <td class="notes">{{ q.notes }}</td>
+            <td><button class="btn-report" onclick="sendReport({{ q.id }})">إرسال تقرير</button></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+<script>
+$(document).ready(function() {
+    var table = $('#queriesTable').DataTable({
+        "order": [[ 8, "desc" ]],  // ترتيب حسب تاريخ الاستعلام
+        "pageLength": 25,
+        "language": {
+            "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json"
+        }
+    });
+
+    // فلترة حسب اليومي
+    $('#dailyFilter').on('change', function () {
+        var val = $(this).val();
+        if(val === 'all') {
+            table.search('').draw();
+        } else if(val === 'yes') {
+            table.column(6).search('نعم').draw();
+        } else if(val === 'no') {
+            table.column(6).search('لا').draw();
+        }
+    });
+});
+
+function sendReport(queryId) {
+    fetch(`/send_report/${queryId}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => alert(data.message))
+        .catch(err => alert('حدث خطأ أثناء إرسال التقرير'));
+}
+</script>
+
+</body>
+</html>-->
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <title>سجلات الاستعلام - العميل {{ customer_name }}</title>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            direction: rtl;
+            text-align: right;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h2 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .filters {
+            margin-bottom: 15px;
+        }
+        .filters label {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .filters select {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+        }
+        th, td {
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        th {
+            background-color: #007bff;
+            color: #fff;
+        }
+        tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+        .daily-yes { color: green; font-weight: bold; }
+        .daily-no { color: red; font-weight: bold; }
+        .notes { font-weight: bold; color: #444; }
+        .btn-report {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        .btn-report:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+
+<h2>سجلات الاستعلام للعميل: {{ customer_name }}</h2>
+
+<div class="filters">
+    <label>فلترة حسب اليومي:</label>
+    <select id="dailyFilter">
+        <option value="all">الكل</option>
+        <option value="yes">يومي فقط</option>
+        <option value="no">غير يومي فقط</option>
+    </select>
+
+    <label>فلترة حسب الرقم:</label>
+    <select id="phoneFilter">
+        <option value="all">الكل</option>
+        {% for q in queries %}
+            <option value="{{ q.phone_number }}">{{ q.phone_number }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<table id="queriesTable">
+    <thead>
+        <tr>
+            <th>رقم الهاتف</th>
+            <th>الرصيد الحالي (GB)</th>
+            <th>الاستهلاك منذ آخر تقرير (GB)</th>
+            <th>الاستهلاك اليومي (GB)</th>
+            <th>المبلغ المستهلك</th>
+            <th>المبلغ المتبقي</th>
+            <th>اليومي</th>
+            <th>الأيام المتبقية</th>
+            <th>تاريخ الاستعلام</th>
+            <th>وقت منذ آخر استعلام</th>
+            <th>الملاحظات</th>
+            <th>إرسال تقرير</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for q in queries %}
+        <tr data-phone="{{ q.phone_number }}">
+            <td>{{ q.phone_number }}</td>
+            <td>{{ "%.2f"|format(q.avblnce) }}</td>
+            <td>{{ "%.2f"|format(q.consumption_since_last) }}</td>
+            <td>{{ "%.2f"|format(q.daily_consumption) }}</td>
+            <td>{{ "%.2f"|format(q.amount_consumed) }}</td>
+            <td>{{ "%.2f"|format(q.amount_remaining) }}</td>
+            <td class="{{ 'daily-yes' if q.daily else 'daily-no' }}">{{ "نعم" if q.daily else "لا" }}</td>
+            <td>{{ q.days_remaining if q.days_remaining is not none else "—" }}</td>
+            <td>{{ datetime_ar(q.query_time) }}</td>
+            <td>{{ q.time_since_last if q.time_since_last else "—" }}</td>
+            <td class="notes">{{ q.notes }}</td>
+            <td><button class="btn-report" onclick="sendReport({{ q.id }})">إرسال تقرير</button></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+$(document).ready(function() {
+    var table = $('#queriesTable').DataTable({
+        "order": [[ 8, "desc" ]],
+        "pageLength": 25,
+        "language": { "url": "//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json" }
+    });
+
+    // فلترة اليومي
+    $('#dailyFilter').on('change', function() {
+        var val = $(this).val();
+        if(val === 'all') table.column(6).search('').draw();
+        else table.column(6).search(val === 'yes' ? 'نعم' : 'لا').draw();
+    });
+
+    // فلترة حسب الرقم
+    $('#phoneFilter').on('change', function() {
+        var val = $(this).val();
+        if(val === 'all') table.column(0).search('').draw();
+        else table.column(0).search('^'+val+'$', true, false).draw();
+    });
+});
+
+function sendReport(queryId) {
+    fetch(`/send_report/${queryId}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => alert(data.message))
+        .catch(err => alert('حدث خطأ أثناء إرسال التقرير'));
+}
+</script>
+
+</body>
+</html>
+
+

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجلات الاستعلام - بوت واتساب</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .stats-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .table-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        .table {
+            margin-bottom: 0;
+        }
+        .table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 15px 10px;
+        }
+        .table td {
+            padding: 12px 10px;
+            vertical-align: middle;
+            border-color: #e9ecef;
+        }
+        .badge-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+        .badge-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .badge-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 10px 25px;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .navbar {
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        .navbar-brand {
+            font-weight: bold;
+            color: #667eea !important;
+        }
+        .nav-link {
+            color: #333 !important;
+            font-weight: 500;
+        }
+        .nav-link:hover {
+            color: #667eea !important;
+        }
+        .balance-cell {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        .date-cell {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .number-cell {
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            color: #495057;
+        }
+        .type-badge {
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+        }
+        .yemen4g {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        .yemenet {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <nav class="navbar navbar-expand-lg">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">
+                    <i class="fas fa-robot"></i> بوت واتساب
+                </a>
+                <div class="navbar-nav me-auto">
+                    <a class="nav-link" href="/dashboard">
+                        <i class="fas fa-tachometer-alt"></i> لوحة الإدارة
+                    </a>
+                    <a class="nav-link active" href="/history">
+                        <i class="fas fa-history"></i> سجلات الاستعلام
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Header -->
+        <div class="header-card">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1 class="mb-3">
+                        <i class="fas fa-history text-primary"></i>
+                        سجلات الاستعلام
+                    </h1>
+                    <p class="lead mb-0">عرض جميع استعلامات الأرقام والبيانات المحفوظة</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-primary" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i> تحديث
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="stats-card">
+                    <div class="stats-number">{{ total_queries }}</div>
+                    <div class="text-muted">إجمالي الاستعلامات</div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="stats-card">
+                    <div class="stats-number">{{ today_numbers }}</div>
+                    <div class="text-muted">أرقام مستعلمة اليوم</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Table -->
+        <div class="table-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3><i class="fas fa-list"></i> آخر 100 استعلام</h3>
+                <small class="text-muted">آخر تحديث: {{ "2025-08-29 22:56" }}</small>
+            </div>
+            
+            {% if history_records %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>الرقم</th>
+                            <th>العميل</th>
+                            <th>الرصيد</th>
+                            <th>الاستهلاك منذ آخر تقرير</th>
+                            <th>الاستهلاك اليومي</th>
+                            <th>المبلغ المستهلك</th>
+                            <th>المبلغ المتبقي</th>
+                            <th>الأيام المتبقية</th>
+                            <th>وقت منذ آخر استعلام</th>
+                            <th>تاريخ الانتهاء</th>
+                            <th>وقت الاستعلام</th>
+                            <th>ملاحظات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in history_records %}
+                        <tr>
+                            <td>{{ record[0] }}</td>
+                            <td class="number-cell">{{ record[1] }}</td>
+                            <td>{{ record[14] or 'غير محدد' }}</td>
+                            <td class="balance-cell">
+                                {% if record[2] %}
+                                    <strong>{{ "%.2f"|format(record[2]) }}</strong> {{ record[3] }}
+                                {% else %}
+                                    <span class="text-muted">غير محدد</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record[6] and record[6] > 0 %}
+                                    <span class="badge bg-info">{{ "%.2f"|format(record[6]) }} GB</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record[7] and record[7] > 0 %}
+                                    <span class="badge bg-warning">{{ "%.2f"|format(record[7]) }} GB</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record[8] and record[8] > 0 %}
+                                    <span class="badge bg-danger">{{ "%.2f"|format(record[8]) }} ريال</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record[9] and record[9] > 0 %}
+                                    <span class="badge bg-success">{{ "%.2f"|format(record[9]) }} ريال</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record[10] is not none %}
+                                    <strong>{{ record[10] }}</strong> يوم
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record[11] %}
+                                    <small class="text-muted">{{ record[11] }}</small>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="date-cell">
+                                <small>{{ record[5] or 'غير محدد' }}</small>
+                            </td>
+                            <td class="date-cell">
+                                <i class="fas fa-clock"></i>
+                                {{ record[13].strftime('%Y-%m-%d %H:%M:%S') if record[13] else 'غير محدد' }}
+                            </td>
+                            <td>
+                                {% if record[12] %}
+                                    <small class="text-muted">{{ record[12][:30] }}{% if record[12]|length > 30 %}...{% endif %}</small>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <h4 class="text-muted">لا توجد سجلات</h4>
+                <p class="text-muted">لم يتم العثور على أي استعلامات محفوظة</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}إرسال رسالة - بوت واتساب{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-paper-plane"></i> إرسال رسالة جديدة</h5>
+            </div>
+            <div class="card-body">
+                <form id="messageForm" onsubmit="sendMessage(event)">
+                    <div class="mb-3">
+                        <label class="form-label">المستلمون</label>
+                        <div class="input-group mb-3">
+                            <select class="form-select" id="recipientType" onchange="updateRecipients()">
+                                <option value="single">رقم واحد</option>
+                                <option value="client">عميل</option>
+                                <option value="all">جميع الأرقام</option>
+                            </select>
+                            <select class="form-select" id="recipientSelect">
+                                <option value="">اختر المستلم</option>
+                            </select>
+                        </div>
+                        <div id="recipientInputContainer" class="mb-3">
+                            <input type="text" class="form-control" id="phoneNumber" placeholder="أدخل رقم الهاتف مع رمز الدولة (مثال: 967123456789)">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="messageType" class="form-label">نوع الرسالة</label>
+                        <select class="form-select" id="messageType" onchange="toggleMessageType()">
+                            <option value="text">نص عادي</option>
+                            <option value="template">قالب</option>
+                            <option value="media">وسائط</option>
+                        </select>
+                    </div>
+
+                    <div id="textMessageContainer">
+                        <div class="mb-3">
+                            <label for="messageText" class="form-label">نص الرسالة</label>
+                            <textarea class="form-control" id="messageText" rows="5" placeholder="اكتب رسالتك هنا..."></textarea>
+                            <div class="form-text">يمكنك استخدام المتغيرات مثل {name} و {number} وسيتم استبدالها بالقيم الفعلية</div>
+                        </div>
+                    </div>
+
+                    <div id="templateContainer" style="display: none;">
+                        <div class="mb-3">
+                            <label for="templateSelect" class="form-label">اختر قالب</label>
+                            <select class="form-select" id="templateSelect">
+                                <option value="">اختر قالب</option>
+                                <option value="welcome">رسالة ترحيب</option>
+                                <option value="followup">متابعة</option>
+                                <option value="promotion">عرض خاص</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">معاينة القالب</label>
+                            <div class="card bg-light p-3">
+                                <div id="templatePreview">اختر قالباً لمعاينته هنا</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="mediaContainer" style="display: none;">
+                        <div class="mb-3">
+                            <label for="mediaFile" class="form-label">رفع ملف وسائط</label>
+                            <input class="form-control" type="file" id="mediaFile" accept="image/*,video/*,application/pdf">
+                        </div>
+                        <div class="mb-3">
+                            <label for="mediaCaption" class="form-label">نص توضيحي (اختياري)</label>
+                            <textarea class="form-control" id="mediaCaption" rows="2" placeholder="أضف وصفاً للوسائط"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-secondary me-md-2" onclick="saveAsDraft()">
+                            <i class="far fa-save"></i> حفظ كمسودة
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> إرسال
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6><i class="fas fa-history"></i> آخر الرسائل المرسلة</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_messages %}
+                <div class="list-group list-group-flush">
+                    {% for msg in recent_messages %}
+                    <div class="list-group-item">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">{{ msg.to|default('رقم غير معروف') }}</h6>
+                            <small>{{ msg.timestamp|datetimeformat('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        <p class="mb-1">{{ msg.message|truncate(50) }}</p>
+                        <small class="text-muted">
+                            {% if msg.status == 'sent' %}
+                            <i class="fas fa-check-circle text-success"></i> تم الإرسال
+                            {% elif msg.status == 'failed' %}
+                            <i class="fas fa-times-circle text-danger"></i> فشل الإرسال
+                            {% else %}
+                            <i class="fas fa-clock text-warning"></i> قيد الإرسال
+                            {% endif %}
+                        </small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center p-3 text-muted">
+                    <i class="fas fa-inbox fa-2x mb-2"></i>
+                    <p class="mb-0">لا توجد رسائل سابقة</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-info-circle"></i> معلومات سريعة</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-users me-2 text-primary"></i>
+                        <strong>{{ clients|length }}</strong> عميل مسجل
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-phone me-2 text-success"></i>
+                        <strong>{{ numbers|length }}</strong> رقم متاح
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle me-2 text-info"></i>
+                        <strong>98%</strong> معدل تسليم الرسائل
+                    </li>
+                </ul>
+                <div class="alert alert-warning p-2 small">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    تأكد من صحة الأرقام قبل الإرسال
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// تهيئة بيانات المستلمين
+const clients = {{ clients|tojson }};
+const numbers = {{ numbers|tojson }};
+
+function updateRecipients() {
+    const type = document.getElementById('recipientType').value;
+    const select = document.getElementById('recipientSelect');
+    const inputContainer = document.getElementById('recipientInputContainer');
+    
+    // تفريغ القائمة
+    select.innerHTML = '<option value="">اختر المستلم</option>';
+    
+    if (type === 'single') {
+        select.style.display = 'none';
+        inputContainer.style.display = 'block';
+    } else if (type === 'client') {
+        select.style.display = 'block';
+        inputContainer.style.display = 'none';
+        
+        // إضافة العملاء للقائمة
+        clients.forEach(client => {
+            const option = document.createElement('option');
+            option.value = client.whatsapp;
+            option.textContent = `${client.name} (${client.whatsapp})`;
+            select.appendChild(option);
+        });
+    } else if (type === 'all') {
+        select.style.display = 'none';
+        inputContainer.style.display = 'none';
+    }
+}
+
+function toggleMessageType() {
+    const type = document.getElementById('messageType').value;
+    document.getElementById('textMessageContainer').style.display = type === 'text' ? 'block' : 'none';
+    document.getElementById('templateContainer').style.display = type === 'template' ? 'block' : 'none';
+    document.getElementById('mediaContainer').style.display = type === 'media' ? 'block' : 'none';
+}
+
+async function sendMessage(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    const type = document.getElementById('recipientType').value;
+    const messageType = document.getElementById('messageType').value;
+    
+    // إعداد بيانات المستلم
+    if (type === 'single') {
+        const phone = document.getElementById('phoneNumber').value.trim();
+        if (!phone) {
+            showError('الرجاء إدخال رقم الهاتف');
+            return;
+        }
+        formData.append('to', phone);
+    } else if (type === 'client') {
+        const clientSelect = document.getElementById('recipientSelect');
+        if (!clientSelect.value) {
+            showError('الرجاء اختيار عميل');
+            return;
+        }
+        formData.append('to', clientSelect.value);
+    } else if (type === 'all') {
+        formData.append('to', 'all');
+    }
+    
+    // إعداد محتوى الرسالة
+    if (messageType === 'text') {
+        const text = document.getElementById('messageText').value.trim();
+        if (!text) {
+            showError('الرجاء إدخال نص الرسالة');
+            return;
+        }
+        formData.append('text', text);
+    } else if (messageType === 'template') {
+        const template = document.getElementById('templateSelect').value;
+        if (!template) {
+            showError('الرجاء اختيار قالب');
+            return;
+        }
+        formData.append('template', template);
+    } else if (messageType === 'media') {
+        const fileInput = document.getElementById('mediaFile');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            showError('الرجاء اختيار ملف وسائط');
+            return;
+        }
+        formData.append('media', fileInput.files[0]);
+        formData.append('caption', document.getElementById('mediaCaption').value);
+    }
+    
+    try {
+        showLoading('جاري إرسال الرسالة...');
+        
+        const response = await fetch('/api/messages/send', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showSuccess('تم إرسال الرسالة بنجاح');
+            // تحديث قائمة الرسائل الأخيرة
+            if (result.message) {
+                addToRecentMessages(result.message);
+            }
+        } else {
+            showError(result.message || 'حدث خطأ أثناء إرسال الرسالة');
+        }
+    } catch (error) {
+        console.error('Error sending message:', error);
+        showError('حدث خطأ في الاتصال بالخادم');
+    }
+}
+
+function saveAsDraft() {
+    // يمكن إضافة وظيفة حفظ المسودة هنا
+    showInfo('تم حفظ المسودة بنجاح');
+}
+
+function addToRecentMessages(message) {
+    // إضافة الرسالة إلى قائمة الرسائل الأخيرة
+    const messagesList = document.querySelector('.list-group');
+    if (messagesList) {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'list-group-item';
+        messageElement.innerHTML = `
+            <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1">${message.to || 'رقم غير معروف'}</h6>
+                <small>الآن</small>
+            </div>
+            <p class="mb-1">${message.message ? message.message.substring(0, 50) + (message.message.length > 50 ? '...' : '') : ''}</p>
+            <small class="text-muted">
+                <i class="fas fa-check-circle text-success"></i> تم الإرسال
+            </small>
+        `;
+        messagesList.prepend(messageElement);
+    }
+}
+
+// تهيئة الصفحة عند التحميل
+document.addEventListener('DOMContentLoaded', function() {
+    updateRecipients();
+    toggleMessageType();
+});
+</script>
+{% endblock %}

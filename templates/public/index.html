@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 WhatsApp Bot Control Panel</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fab fa-whatsapp"></i>
+                    <h1>لوحة تحكم بوت واتساب</h1>
+                </div>
+                <div class="status-indicator" id="connectionStatus">
+                    <span class="status-dot offline"></span>
+                    <span class="status-text">غير متصل</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-menu">
+                <a href="#" class="nav-item active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>لوحة التحكم</span>
+                </a>
+                <a href="#" class="nav-item" data-section="messages">
+                    <i class="fas fa-comments"></i>
+                    <span>الرسائل</span>
+                </a>
+                <a href="#" class="nav-item" data-section="session">
+                    <i class="fas fa-cogs"></i>
+                    <span>إدارة الجلسة</span>
+                </a>
+                <a href="#" class="nav-item" data-section="qr">
+                    <i class="fas fa-qrcode"></i>
+                    <span>رمز QR</span>
+                </a>
+                <a href="#" class="nav-item" data-section="logs">
+                    <i class="fas fa-file-alt"></i>
+                    <span>السجلات</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="container">
+            <!-- Dashboard Section -->
+            <section id="dashboard" class="section active">
+                <div class="section-header">
+                    <h2><i class="fas fa-tachometer-alt"></i> لوحة التحكم الرئيسية</h2>
+                    <button class="refresh-btn" onclick="refreshDashboard()">
+                        <i class="fas fa-sync-alt"></i> تحديث
+                    </button>
+                </div>
+
+                <!-- Quick Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-signal"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="clientStatus">غير متصل</h3>
+                            <p>حالة العميل</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-envelope"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="messageCount">0</h3>
+                            <p>عدد الرسائل</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="errorCount">0</h3>
+                            <p>عدد الأخطاء</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3 id="uptime">0 د</h3>
+                            <p>وقت التشغيل</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Info -->
+                <div class="info-grid">
+                    <div class="info-card">
+                        <h3><i class="fas fa-info-circle"></i> معلومات النظام</h3>
+                        <div class="info-list" id="systemInfo">
+                            <div class="loading">جاري التحميل...</div>
+                        </div>
+                    </div>
+                    <div class="info-card">
+                        <h3><i class="fas fa-chart-line"></i> الإحصائيات</h3>
+                        <div class="chart-container">
+                            <canvas id="messageChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="actions-card">
+                    <h3><i class="fas fa-bolt"></i> إجراءات سريعة</h3>
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" onclick="startSession()">
+                            <i class="fas fa-play"></i> تشغيل الجلسة
+                        </button>
+                        <button class="btn btn-warning" onclick="restartSession()">
+                            <i class="fas fa-redo"></i> إعادة التشغيل
+                        </button>
+                        <button class="btn btn-danger" onclick="stopSession()">
+                            <i class="fas fa-stop"></i> إيقاف الجلسة
+                        </button>
+                        <button class="btn btn-info" onclick="showQR()">
+                            <i class="fas fa-qrcode"></i> عرض QR
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Messages Section -->
+            <section id="messages" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-comments"></i> إدارة الرسائل</h2>
+                </div>
+
+                <!-- Send Message Form -->
+                <div class="message-form-card">
+                    <h3><i class="fas fa-paper-plane"></i> إرسال رسالة جديدة</h3>
+                    <form id="sendMessageForm" class="send-form">
+                        <div class="form-group">
+                            <label for="phoneNumber">رقم الهاتف</label>
+                            <input type="tel" id="phoneNumber" placeholder="966xxxxxxxxx" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="messageText">نص الرسالة</label>
+                            <textarea id="messageText" placeholder="اكتب رسالتك هنا..." rows="4" required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="mediaFile">ملف مرفق (اختياري)</label>
+                            <input type="file" id="mediaFile" accept="image/*,video/*,.pdf,.doc,.docx">
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> إرسال الرسالة
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Messages List -->
+                <div class="messages-card">
+                    <h3><i class="fas fa-list"></i> الرسائل الأخيرة</h3>
+                    <div class="messages-controls">
+                        <button class="btn btn-outline" onclick="loadMessages()">
+                            <i class="fas fa-refresh"></i> تحديث
+                        </button>
+                        <select id="messageFilter">
+                            <option value="all">جميع الرسائل</option>
+                            <option value="sent">المرسلة</option>
+                            <option value="received">المستقبلة</option>
+                        </select>
+                    </div>
+                    <div class="messages-list" id="messagesList">
+                        <div class="loading">جاري تحميل الرسائل...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Session Management Section -->
+            <section id="session" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-cogs"></i> إدارة الجلسة</h2>
+                </div>
+
+                <div class="session-grid">
+                    <div class="session-card">
+                        <h3><i class="fas fa-info-circle"></i> معلومات الجلسة</h3>
+                        <div class="session-info" id="sessionInfo">
+                            <div class="loading">جاري التحميل...</div>
+                        </div>
+                    </div>
+
+                    <div class="session-card">
+                        <h3><i class="fas fa-tools"></i> التحكم بالجلسة</h3>
+                        <div class="session-controls">
+                            <button class="btn btn-success btn-block" onclick="startSession()">
+                                <i class="fas fa-play"></i> تشغيل الجلسة
+                            </button>
+                            <button class="btn btn-warning btn-block" onclick="restartSession()">
+                                <i class="fas fa-redo"></i> إعادة تشغيل الجلسة
+                            </button>
+                            <button class="btn btn-danger btn-block" onclick="disconnectSession()">
+                                <i class="fas fa-plug"></i> قطع الاتصال
+                            </button>
+                            <button class="btn btn-danger btn-block" onclick="logoutSession()" style="background: #8b0000; border-color: #8b0000;">
+                                <i class="fas fa-sign-out-alt"></i> تسجيل خروج من الجلسة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- QR Code Section -->
+            <section id="qr" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-qrcode"></i> رمز الاستجابة السريعة</h2>
+                </div>
+
+                <div class="qr-card">
+                    <div class="qr-container" id="qrContainer">
+                        <div class="qr-placeholder">
+                            <i class="fas fa-qrcode"></i>
+                            <p>لا يوجد رمز QR متاح حالياً</p>
+                            <button class="btn btn-primary" onclick="refreshQR()">
+                                <i class="fas fa-refresh"></i> تحديث QR
+                            </button>
+                        </div>
+                    </div>
+                    <div class="qr-instructions">
+                        <h4><i class="fas fa-mobile-alt"></i> تعليمات المسح</h4>
+                        <ol>
+                            <li>افتح تطبيق واتساب على هاتفك</li>
+                            <li>اضغط على الإعدادات (Settings)</li>
+                            <li>اختر "WhatsApp Web"</li>
+                            <li>امسح رمز QR أعلاه</li>
+                        </ol>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Logs Section -->
+            <section id="logs" class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-file-alt"></i> السجلات والأخطاء</h2>
+                    <button class="btn btn-outline" onclick="clearLogs()">
+                        <i class="fas fa-trash"></i> مسح السجلات
+                    </button>
+                </div>
+
+                <div class="logs-grid">
+                    <div class="logs-card">
+                        <h3><i class="fas fa-exclamation-triangle"></i> الأخطاء الأخيرة</h3>
+                        <div class="logs-list" id="errorsList">
+                            <div class="loading">جاري تحميل الأخطاء...</div>
+                        </div>
+                    </div>
+                    <div class="logs-card">
+                        <h3><i class="fas fa-list"></i> سجل النشاطات</h3>
+                        <div class="logs-list" id="activityLogs">
+                            <div class="loading">جاري تحميل السجلات...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Notification Container -->
+    <div id="notifications" class="notifications"></div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>جاري المعالجة...</p>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
