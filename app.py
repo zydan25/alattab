@@ -5880,13 +5880,65 @@ monitor_thread = threading.Thread(target=monitor_node_server, daemon=True)
 #     monitor_thread.start()
     
 #     app.run(debug=True, host='0.0.0.0', port=5000)
+# if __name__ == '__main__':
+#     # إنشاء قاعدة البيانات والجداول باستخدام SQLAlchemy
+#     with app.app_context():
+#         # إنشاء جميع الجداول
+#         db.create_all()
+#         print("[INFO] ✅ تم إنشاء قاعدة البيانات والجداول بنجاح (balance.db)")
+        
+#         # إنشاء مستخدم admin افتراضي إذا لم يكن موجوداً
+#         try:
+#             admin_exists = User.query.filter_by(username='admin').first()
+#             if not admin_exists:
+#                 import hashlib
+#                 hashed_password = hashlib.sha256('admin123'.encode('utf-8')).hexdigest()
+#                 admin_user = User(
+#                     username='admin',
+#                     password=hashed_password,
+#                     full_name='مدير النظام',
+#                     email='admin@example.com',
+#                     is_admin=True
+#                 )
+#                 db.session.add(admin_user)
+#                 db.session.commit()
+#                 print("[INFO] ✅ تم إنشاء مستخدم admin افتراضي (admin/admin123)")
+#             else:
+#                 print("[INFO] ℹ️ مستخدم admin موجود مسبقاً")
+#         except Exception as e:
+#             print(f"[ERROR] ❌ فشل في إنشاء مستخدم admin: {e}")
+      
+#     # بدء Auto Query Scheduler (افتراضياً مفعّل)
+#     if auto_query_running:
+#         auto_query_thread = threading.Thread(target=auto_query_scheduler, daemon=True)
+#         auto_query_thread.start()
+#         print("[INFO] ✅ تم تشغيل Auto Query Scheduler")
+    
+#     # تشغيل أوامر CLI إذا وجدت
+#     cli()
+#     # إنشاء ملف لتتبع وقت بدء التشغيل
+#     with open('.server_start_time', 'w') as f:
+#         f.write(str(time.time()))
+    
+#     # إنشاء مجلد النسخ الاحتياطي إذا لم يكن موجوداً
+#     os.makedirs('backups', exist_ok=True)
+#     os.makedirs('instance', exist_ok=True)  # للتأكد من وجود مجلد instance
+    
+#     # بدء مراقبة خادم Node.js
+#     monitor_thread.start()
+  
+#     print("\n" + "="*50)
+#     print("🚀 تشغيل خادم Flask على http://0.0.0.0:5000")
+#     print("="*50 + "\n")
+#     port = int(os.environ.get('PORT', 5000))
+#     # app.run(host='0.0.0.0', port=port)
+#     app.run(host='0.0.0.0', port=port)
 if __name__ == '__main__':
-    # إنشاء قاعدة البيانات والجداول باستخدام SQLAlchemy
     with app.app_context():
         # إنشاء جميع الجداول
         db.create_all()
         print("[INFO] ✅ تم إنشاء قاعدة البيانات والجداول بنجاح (balance.db)")
-        
+
         # إنشاء مستخدم admin افتراضي إذا لم يكن موجوداً
         try:
             admin_exists = User.query.filter_by(username='admin').first()
@@ -5907,32 +5959,26 @@ if __name__ == '__main__':
                 print("[INFO] ℹ️ مستخدم admin موجود مسبقاً")
         except Exception as e:
             print(f"[ERROR] ❌ فشل في إنشاء مستخدم admin: {e}")
-      
-    # بدء Auto Query Scheduler (افتراضياً مفعّل)
+
+    # بدء Auto Query Scheduler إذا مفعل
     if auto_query_running:
         auto_query_thread = threading.Thread(target=auto_query_scheduler, daemon=True)
         auto_query_thread.start()
         print("[INFO] ✅ تم تشغيل Auto Query Scheduler")
-    
+
     # تشغيل أوامر CLI إذا وجدت
     cli()
-    # إنشاء ملف لتتبع وقت بدء التشغيل
-    with open('.server_start_time', 'w') as f:
-        f.write(str(time.time()))
-    
-    # إنشاء مجلد النسخ الاحتياطي إذا لم يكن موجوداً
+
+    # إنشاء مجلدات للنسخ الاحتياطي وinstance
     os.makedirs('backups', exist_ok=True)
-    os.makedirs('instance', exist_ok=True)  # للتأكد من وجود مجلد instance
-    
+    os.makedirs('instance', exist_ok=True)
+
     # بدء مراقبة خادم Node.js
     monitor_thread.start()
-  
-    print("\n" + "="*50)
-    print("🚀 تشغيل خادم Flask على http://0.0.0.0:5000")
-    print("="*50 + "\n")
-    port = int(os.environ.get('PORT', 5000))
-    # app.run(host='0.0.0.0', port=port)
-    app.run(debug=True, host='0.0.0.0', port=port)
 
+    # تحديد المنفذ من البيئة وتشغيل Flask
+    port = int(os.environ.get('PORT', 5000))
+    print(f"\n🚀 تشغيل خادم Flask على http://0.0.0.0:{port}\n")
+    app.run(host='0.0.0.0', port=port)
 
 
