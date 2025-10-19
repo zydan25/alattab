@@ -2495,7 +2495,7 @@ from bidi.algorithm import get_display
 # تسجيل خط يدعم العربية
 #pdfmetrics.registerFont(UnicodeCIDFont('HeiseiKakuGo-W5'))
 # تسجيل الخط العربي
-pdfmetrics.registerFont(TTFont('Arial', 'Arial.ttf'))
+pdfmetrics.registerFont(TTFont('Arial', 'static/fonts/Arial.ttf'))
 
 def process_arabic(text):
     reshaped_text = arabic_reshaper.reshape(str(text))
