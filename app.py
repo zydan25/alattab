@@ -4,7 +4,7 @@ import json     # للتعامل مع ملفات JSON والبيانات
 import random   # لإنشاء أرقام عشوائية للمعاملات
 import sqlite3  # للتعامل مع قاعدة البيانات
 import string   # للتعامل مع النصوص والأحرف
-from datetime import datetime, timedelta, timezone  # للتعامل مع التواريخ والأوقات
+from datetime import datetime, timedelta, timezone, date  # للتعامل مع التواريخ والأوقات
 from pathlib import Path  # للتعامل مع مسارات الملفات
 import re  # للتعامل مع التعبيرات النمطية
 import json
@@ -143,11 +143,38 @@ class Customer(db.Model):
 
 
 class Number(db.Model):
+    """جدول الأرقام مع بيانات الاستعلام اليومي"""
     __tablename__ = "numbers"
+    
+    # المعلومات الأساسية
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     client_id = db.Column(db.Integer, db.ForeignKey("customers.id", ondelete="CASCADE"), nullable=False)
     number = db.Column(db.String, nullable=False)
     type = db.Column(db.String, nullable=False)  # yemenet أو yemen4g
+    
+    # بيانات الباقة والرصيد (من آخر استعلام يومي)
+    package_value = db.Column(db.Float, default=0.0)  # قيمة الباقة بالريال
+    current_balance_gb = db.Column(db.Float, default=0.0)  # الرصيد الحالي بالجيجا
+    
+    # التواريخ والوقت
+    expiry_date = db.Column(db.DateTime)  # تاريخ انتهاء الباقة
+    days_remaining = db.Column(db.Integer)  # الأيام المتبقية
+    current_query_time = db.Column(db.DateTime)  # وقت الاستعلام الحالي
+    previous_query_time = db.Column(db.DateTime)  # وقت الاستعلام السابق (الأمس)
+    
+    # الاستهلاك اليومي (الفرق من الأمس)
+    previous_balance_gb = db.Column(db.Float, default=0.0)  # الرصيد في الاستعلام السابق
+    daily_consumption_gb = db.Column(db.Float, default=0.0)  # الاستهلاك اليومي = السابق - الحالي
+    
+    # المبالغ المالية
+    amount_consumed = db.Column(db.Float, default=0.0)  # المبلغ المستهلك (ريال)
+    amount_remaining = db.Column(db.Float, default=0.0)  # المبلغ المتبقي (ريال)
+    
+    # الحالة والملاحظات
+    status = db.Column(db.String(20))  # الحالة: active, warning, critical, expired
+    notes = db.Column(db.String(255))  # ملاحظات تلقائية (مثل: تم التسديد، قرب الانتهاء)
+    
+    # الحقول القديمة (للتوافق المؤقت)
     last_balance = db.Column(db.String)  # نص رصيد (مثلاً "67.95 GB")
     last_balance_value = db.Column(db.Float)  # قيمة الرصيد كرقم
     last_balance_timestamp = db.Column(db.String)  # تاريخ آخر استعلام كنص
@@ -155,7 +182,70 @@ class Number(db.Model):
     __table_args__ = (
         db.UniqueConstraint('client_id', 'number', name='uix_client_number'),
     )
-# بعد class Number(db.Model):
+    
+    def __repr__(self):
+        return f'<Number {self.number} - {self.current_balance_gb}GB>'
+
+
+class DailyQuery(db.Model):
+    """جدول الاستعلامات اليومية - سجل تاريخي يومي"""
+    __tablename__ = "daily_queries"
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    number_id = db.Column(db.Integer, db.ForeignKey("numbers.id", ondelete="CASCADE"), nullable=False)
+    query_date = db.Column(db.Date, nullable=False, index=True)  # تاريخ الاستعلام (يوم فقط)
+    query_time = db.Column(db.DateTime, default=datetime.utcnow)  # الوقت الكامل
+    
+    # بيانات الباقة والرصيد
+    package_value = db.Column(db.Float, default=0.0)
+    balance_gb = db.Column(db.Float, default=0.0)
+    
+    # التواريخ
+    expiry_date = db.Column(db.DateTime)
+    days_remaining = db.Column(db.Integer)
+    
+    # الاستهلاك اليومي
+    daily_consumption_gb = db.Column(db.Float, default=0.0)
+    
+    # المبالغ المالية
+    amount_consumed = db.Column(db.Float, default=0.0)
+    amount_remaining = db.Column(db.Float, default=0.0)
+    
+    # الحالة
+    status = db.Column(db.String(20))  # active, warning, critical, expired
+    notes = db.Column(db.String(255))
+    
+    # البيانات الخام (للرجوع إليها عند الحاجة)
+    raw_data = db.Column(db.Text)
+    
+    # العلاقات
+    number = db.relationship("Number", backref="daily_queries", lazy=True)
+    
+    __table_args__ = (
+        # لضمان استعلام واحد فقط لكل رقم في اليوم
+        db.UniqueConstraint('number_id', 'query_date', name='uix_number_date'),
+        db.Index('idx_query_date', 'query_date'),
+    )
+    
+    def __repr__(self):
+        return f'<DailyQuery {self.number_id} - {self.query_date}>'
+    
+    def to_dict(self):
+        """تحويل بيانات الاستعلام اليومي إلى قاموس"""
+        return {
+            'id': self.id,
+            'number_id': self.number_id,
+            'query_date': self.query_date.isoformat() if self.query_date else None,
+            'query_time': self.query_time.isoformat() if self.query_time else None,
+            'package_value': self.package_value,
+            'balance_gb': self.balance_gb,
+            'daily_consumption_gb': self.daily_consumption_gb,
+            'days_remaining': self.days_remaining,
+            'amount_remaining': self.amount_remaining,
+            'status': self.status,
+            'notes': self.notes
+        }
+
 
 class User(db.Model):
     """جدول المستخدمين - للمصادقة"""
@@ -5704,51 +5794,180 @@ auto_query_thread = None
 last_auto_query_run = None
 
 def auto_query_scheduler(): 
-    """Background thread للاستعلام التلقائي"""
+    """
+    Background thread للاستعلام التلقائي اليومي
+    يستخدم النظام الجديد: numbers + daily_queries
+    """
     global last_auto_query_run
+    
+    # استيراد الدوال الجديدة
+    from number_daily_updater import (
+        update_number_and_save_daily,
+        format_daily_report_from_numbers,
+        handle_query_error
+    )
+    
     while auto_query_running:
         try:
-            with app.app_context():  # ✅ أضف Flask context
+            with app.app_context():
                 now = datetime.now().time()
                 customers = Customer.query.filter_by(auto_query_enabled=True).all()
                 
                 for customer in customers:
-                    if customer.auto_query_time and customer.auto_query_time.hour == now.hour and customer.auto_query_time.minute == now.minute:
-                        # Execute auto query
-                        numbers = Number.query.filter_by(client_id=customer.id).all()
-                        nums = [(n.number, n.type) for n in numbers]
-                        results = []
+                    # التحقق من وقت الاستعلام التلقائي
+                    if customer.auto_query_time and \
+                       customer.auto_query_time.hour == now.hour and \
+                       customer.auto_query_time.minute == now.minute:
                         
-                        for (num, ntype) in nums:
+                        print(f"\n{'='*70}")
+                        print(f"🔄 [AUTO] بدء الاستعلام التلقائي للعميل: {customer.name}")
+                        print(f"{'='*70}")
+                        
+                        # الحصول على أرقام العميل
+                        numbers = Number.query.filter_by(client_id=customer.id).all()
+                        
+                        if not numbers:
+                            print(f"⚠️ [AUTO] لا توجد أرقام للعميل {customer.name}")
+                            continue
+                        
+                        success_count = 0
+                        error_count = 0
+                        
+                        # استعلام كل رقم وتحديث البيانات
+                        for number_obj in numbers:
                             try:
-                                res = query_number(num, is_daily=True)
-                                results.append(res)
+                                print(f"\n📱 استعلام الرقم: {number_obj.number}")
                                 
+                                # 1. استعلام الرقم من API
+                                query_result = query_number(number_obj.number)
+                                
+                                # عرض النتيجة الكاملة للتأكد
+                                print(f"\n   📋 النتيجة الكاملة من API:")
+                                print(f"   {json.dumps(query_result, indent=2, ensure_ascii=False)}")
+                                
+                                if 'error' in query_result:
+                                    error_msg = query_result.get('error', 'خطأ غير معروف')
+                                    print(f"   ❌ خطأ: {error_msg}")
+                                    error_count += 1
+                                    
+                                    # معالجة الخطأ - حفظ بيانات بحالة خطأ
+                                    number_obj = handle_query_error(number_obj, error_msg)
+                                    db.session.commit()
+                                    
+                                    # حفظ سجل يومي بحالة الخطأ
+                                    daily_record = DailyQuery(
+                                        number_id=number_obj.id,
+                                        query_date=date.today(),
+                                        query_time=datetime.utcnow(),
+                                        package_value=0.0,
+                                        balance_gb=0.0,
+                                        daily_consumption_gb=0.0,
+                                        status="error",
+                                        notes=error_msg,
+                                        raw_data=json.dumps(query_result, ensure_ascii=False)
+                                    )
+                                    db.session.add(daily_record)
+                                    db.session.commit()
+                                    
+                                    # حفظ log للخطأ
+                                    log_entry = Log(
+                                        customer_id=customer.id,
+                                        number=number_obj.number,
+                                        type=number_obj.type,
+                                        response=json.dumps(query_result, ensure_ascii=False),
+                                        created_at=datetime.utcnow()
+                                    )
+                                    db.session.add(log_entry)
+                                    db.session.commit()
+                                    continue
+                                
+                                # 2. تحديث جدول numbers + حفظ في daily_queries
+                                print(f"\n   🔄 جاري تحديث البيانات...")
+
+                                
+                                # استخراج البيانات من المكان الصحيح
+                                query_data = query_result.get('query', {}).get('raw', {})
+                                print(f"   📦 البيانات المستخرجة للتحديث:")
+                                print(f"      - avblnce_gb: {query_data.get('avblnce_gb')}")
+                                print(f"      - baga_amount: {query_data.get('baga_amount')}")
+                                print(f"      - expdate: {query_data.get('expdate')}")
+                                print(f"      - days_remaining: {query_data.get('days_remaining')}")
+                                
+                                number_obj, daily_record = update_number_and_save_daily(
+                                    number_obj,
+                                    query_data,  # ✅ استخدام البيانات من raw
+                                    raw_data=query_result
+                                )
+                                
+                                print(f"\n   ✅ تم التحديث - البيانات بعد الحفظ:")
+                                print(f"      📊 الرصيد السابق: {number_obj.previous_balance_gb:.2f} GB")
+                                print(f"      📊 الرصيد الحالي: {number_obj.current_balance_gb:.2f} GB")
+                                print(f"      📉 الاستهلاك اليومي: {number_obj.daily_consumption_gb:.2f} GB")
+                                print(f"      💰 قيمة الباقة: {number_obj.package_value:.0f} ريال")
+                                print(f"      📅 تاريخ الانتهاء: {number_obj.expiry_date}")
+                                print(f"      ⏰ الأيام المتبقية: {number_obj.days_remaining}")
+                                print(f"      💵 المبلغ المتبقي: {number_obj.amount_remaining:.2f} ريال")
+                                print(f"      📝 الحالة: {number_obj.status}")
+                                print(f"      📌 الملاحظات: {number_obj.notes}")
+                                print(f"   💾 حفظ السجل اليومي: {daily_record.query_date}")
+                                
+                                # 3. حفظ log للنجاح (اختياري)
                                 log_entry = Log(
                                     customer_id=customer.id,
-                                    number=num,
-                                    type=ntype,
-                                    response=json.dumps(res, ensure_ascii=False),
+                                    number=number_obj.number,
+                                    type=number_obj.type,
+                                    response=json.dumps(query_result, ensure_ascii=False),
                                     created_at=datetime.utcnow()
                                 )
                                 db.session.add(log_entry)
                                 db.session.commit()
+                                
+                                success_count += 1
+                                
                             except Exception as e:
-                                print(f"[ERROR] خطأ في الاستعلام التلقائي للرقم {num}: {e}")
-                        print("iiiiiiiiiiiiiiiiiii")
-                        # Send report
+                                print(f"   ❌ خطأ في معالجة {number_obj.number}: {e}")
+                                import traceback
+                                traceback.print_exc()
+                                error_count += 1
+                        
+                        # 4. إرسال التقرير من البيانات المخزنة
                         try:
-                            report = format_arabic_report(results, customer.id)
+                            print(f"\n📤 جاري إرسال التقرير للعميل {customer.name}...")
+                            
+                            # إنشاء التقرير من جدول numbers (البيانات المخزنة)
+                            report, one_d, tow_d = format_daily_report_from_numbers(customer.id)
+                            
+                            # إرسال عبر واتساب
                             send_whatsapp(customer.whatsapp, report)
                             
+                            # إنشاء PDF (اختياري)
+                            try:
+                                pdf_path = create_pdf(one_d, tow_d, customer.name, customer.whatsapp, 'static/image/pdf.png')
+                                print(f"   📄 تم إنشاء PDF: {pdf_path}")
+                            except Exception as pdf_error:
+                                print(f"   ⚠️ فشل إنشاء PDF: {pdf_error}")
+                            
+                            # تحديث وقت آخر استعلام
                             last_auto_query_run = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                            print(f"[AUTO] تم إرسال تقرير تلقائي للعميل {customer.name}")
+                            
+                            print(f"✅ [AUTO] تم إرسال التقرير بنجاح")
+                            print(f"   📊 النتائج: {success_count} نجح، {error_count} فشل")
+                            print(f"   📞 تم الإرسال إلى: {customer.whatsapp}")
+                            
                         except Exception as e:
-                            print(f"[ERROR] فشل إرسال التقرير التلقائي: {e}")
+                            print(f"❌ [AUTO] فشل إرسال التقرير: {e}")
+                            import traceback
+                            traceback.print_exc()
+                        
+                        print(f"{'='*70}\n")
             
-            time.sleep(60)  # Sleep 1 minute
+            # انتظار دقيقة واحدة قبل التحقق مرة أخرى
+            time.sleep(60)
+            
         except Exception as e:
-            print(f"[ERROR] خطأ في scheduler: {e}")
+            print(f"❌ [AUTO] خطأ في scheduler: {e}")
+            import traceback
+            traceback.print_exc()
             time.sleep(60)
 
 

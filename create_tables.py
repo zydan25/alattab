@@ -121,19 +121,137 @@ class Customer(db.Model):
     )
 
 
+class DailyQuery(db.Model):
+    """جدول الاستعلامات اليومية - سجل تاريخي يومي"""
+    __tablename__ = "daily_queries"
+    
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    number_id = db.Column(db.Integer, db.ForeignKey("numbers.id", ondelete="CASCADE"), nullable=False)
+    query_date = db.Column(db.Date, nullable=False, index=True)  # تاريخ الاستعلام (يوم فقط)
+    query_time = db.Column(db.DateTime, default=datetime.utcnow)  # الوقت الكامل
+    
+    # بيانات الباقة والرصيد
+    package_value = db.Column(db.Float, default=0.0)
+    balance_gb = db.Column(db.Float, default=0.0)
+    
+    # التواريخ
+    expiry_date = db.Column(db.DateTime)
+    days_remaining = db.Column(db.Integer)
+    
+    # الاستهلاك اليومي
+    daily_consumption_gb = db.Column(db.Float, default=0.0)
+    
+    # المبالغ المالية
+    amount_consumed = db.Column(db.Float, default=0.0)
+    amount_remaining = db.Column(db.Float, default=0.0)
+    
+    # الحالة
+    status = db.Column(db.String(20))  # active, warning, critical, expired
+    notes = db.Column(db.String(255))
+    
+    # البيانات الخام (للرجوع إليها عند الحاجة)
+    raw_data = db.Column(db.Text)
+    
+    # العلاقات
+    number = db.relationship("Number", backref="daily_queries", lazy=True)
+    
+    __table_args__ = (
+        # لضمان استعلام واحد فقط لكل رقم في اليوم
+        db.UniqueConstraint('number_id', 'query_date', name='uix_number_date'),
+        db.Index('idx_query_date', 'query_date'),
+    )
+    
+    def __repr__(self):
+        return f'<DailyQuery {self.number_id} - {self.query_date}>'
+    
+    def to_dict(self):
+        """تحويل بيانات الاستعلام اليومي إلى قاموس"""
+        return {
+            'id': self.id,
+            'number_id': self.number_id,
+            'query_date': self.query_date.isoformat() if self.query_date else None,
+            'query_time': self.query_time.isoformat() if self.query_time else None,
+            'package_value': self.package_value,
+            'balance_gb': self.balance_gb,
+            'daily_consumption_gb': self.daily_consumption_gb,
+            'days_remaining': self.days_remaining,
+            'amount_remaining': self.amount_remaining,
+            'status': self.status,
+            'notes': self.notes
+        }
+
+
 class Number(db.Model):
+    """جدول الأرقام مع بيانات الاستعلام اليومي - مبسط"""
     __tablename__ = "numbers"
+    
+    # ====== المعلومات الأساسية ======
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     client_id = db.Column(db.Integer, db.ForeignKey("customers.id", ondelete="CASCADE"), nullable=False)
     number = db.Column(db.String, nullable=False)
     type = db.Column(db.String, nullable=False)  # yemenet أو yemen4g
-    last_balance = db.Column(db.String)  # نص رصيد (مثلاً "67.95 GB")
-    last_balance_value = db.Column(db.Float)  # قيمة الرصيد كرقم
-    last_balance_timestamp = db.Column(db.String)  # تاريخ آخر استعلام كنص
-
+    
+    # ====== بيانات الباقة والرصيد (من آخر استعلام يومي) ======
+    package_value = db.Column(db.Float, default=0.0)  # قيمة الباقة بالريال
+    current_balance_gb = db.Column(db.Float, default=0.0)  # الرصيد الحالي بالجيجا
+    
+    # ====== التواريخ والوقت ======
+    expiry_date = db.Column(db.DateTime)  # تاريخ انتهاء الباقة
+    days_remaining = db.Column(db.Integer)  # الأيام المتبقية
+    current_query_time = db.Column(db.DateTime)  # وقت الاستعلام الحالي
+    previous_query_time = db.Column(db.DateTime)  # وقت الاستعلام السابق (الأمس)
+    
+    # ====== الاستهلاك اليومي (الفرق من الأمس) ======
+    previous_balance_gb = db.Column(db.Float, default=0.0)  # الرصيد في الاستعلام السابق
+    daily_consumption_gb = db.Column(db.Float, default=0.0)  # الاستهلاك اليومي = السابق - الحالي
+    
+    # ====== المبالغ المالية ======
+    amount_consumed = db.Column(db.Float, default=0.0)  # المبلغ المستهلك (ريال)
+    amount_remaining = db.Column(db.Float, default=0.0)  # المبلغ المتبقي (ريال)
+    
+    # ====== الحالة والملاحظات ======
+    status = db.Column(db.String(20))  # الحالة: active, warning, critical, expired
+    notes = db.Column(db.String(255))  # ملاحظات تلقائية (مثل: تم التسديد، قرب الانتهاء)
+    
     __table_args__ = (
         db.UniqueConstraint('client_id', 'number', name='uix_client_number'),
     )
+    
+    def __repr__(self):
+        return f'<Number {self.number} - {self.current_balance_gb}GB>'
+    
+    def calculate_daily_consumption(self):
+        """حساب الاستهلاك اليومي من الفرق بين الأمس واليوم"""
+        if self.previous_balance_gb and self.current_balance_gb:
+            # التعامل مع حالة التعبئة (إذا زاد الرصيد)
+            if self.current_balance_gb > self.previous_balance_gb:
+                # تم التسديد - نحتاج للباقة لحساب الاستهلاك الصحيح
+                # الاستهلاك = الرصيد السابق + حجم الباقة الجديدة - الرصيد الحالي
+                return 0.0  # سيتم الحساب في دالة التحديث
+            else:
+                # استهلاك عادي
+                return self.previous_balance_gb - self.current_balance_gb
+        return 0.0
+    
+    def to_dict(self):
+        """تحويل بيانات الرقم إلى قاموس"""
+        return {
+            'id': self.id,
+            'number': self.number,
+            'type': self.type,
+            'package_value': self.package_value,
+            'current_balance_gb': self.current_balance_gb,
+            'previous_balance_gb': self.previous_balance_gb,
+            'daily_consumption_gb': self.daily_consumption_gb,
+            'expiry_date': self.expiry_date.isoformat() if self.expiry_date else None,
+            'days_remaining': self.days_remaining,
+            'amount_consumed': self.amount_consumed,
+            'amount_remaining': self.amount_remaining,
+            'status': self.status,
+            'notes': self.notes,
+            'current_query_time': self.current_query_time.isoformat() if self.current_query_time else None,
+            'previous_query_time': self.previous_query_time.isoformat() if self.previous_query_time else None
+        }
 
 
 # class Query(db.Model):
